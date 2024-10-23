@@ -1,151 +1,125 @@
 import streamlit as st
 import pandas as pd
+import random
 import math
 from pathlib import Path
 
-# Set the title and favicon that appear in the Browser's tab bar.
+# Set the title and logo for the page
 st.set_page_config(
-    page_title='GDP dashboard',
-    page_icon=':earth_americas:', # This is an emoji shortcode. Could be a URL too.
+    page_title='M8 Fortnite Data Overview',
+    page_icon="assets/M8Patch.png",  # Set the path to your logo in the "assets" folder
 )
 
 # -----------------------------------------------------------------------------
-# Declare some useful functions.
+# Add the logo and title side by side
+col1, col2 = st.columns([1, 3])  # Adjust the column proportions as needed
 
+with col1:
+    st.image("assets/M8Patch.png", width=75)  # Display the logo on the left
+
+with col2:
+    st.title("M8 Fortnite Data Overview")  # Display the updated title on the right
+
+# Placeholder for Fortnite tournament data.
 @st.cache_data
-def get_gdp_data():
-    """Grab GDP data from a CSV file.
+def get_fortnite_data():
+    """Placeholder Fortnite tournament data."""
+    players = ['Snayzy', 'Podasai', 'Vanyak']
+    tournaments = ['Major 1', 'Major 2', 'Major 3']
 
-    This uses caching to avoid having to read the file every time. If we were
-    reading from an HTTP endpoint instead of a file, it's a good idea to set
-    a maximum age to the cache with the TTL argument: @st.cache_data(ttl='1d')
-    """
+    # Generate placeholder data
+    data = []
+    for player in players:
+        for tournament in tournaments:
+            data.append({
+                'Player': player,
+                'Tournament': tournament,
+                'Rank': random.randint(1, 100),
+                'Points Earned': random.randint(100, 300),
+                'Damage Dealt': random.randint(1000, 5000),
+                'Damage Taken': random.randint(500, 3000),
+                'Builds': random.randint(50, 200),
+                'Farmed': random.randint(300, 1000),
+                'Duo': random.choice([p for p in players if p != player]),  # Duo can't be the player themselves
+                'Duo Damage Dealt': random.randint(1000, 5000),
+                'Duo Damage Taken': random.randint(500, 3000),
+                'Duo Builds': random.randint(50, 200),
+                'Duo Farmed': random.randint(300, 1000),
+            })
 
-    # Instead of a CSV on disk, you could read from an HTTP endpoint here too.
-    DATA_FILENAME = Path(__file__).parent/'data/gdp_data.csv'
-    raw_gdp_df = pd.read_csv(DATA_FILENAME)
+    fortnite_df = pd.DataFrame(data)
+    fortnite_df['Damage Ratio'] = fortnite_df['Damage Dealt'] / fortnite_df['Damage Taken']
+    fortnite_df['Duo Damage Ratio'] = fortnite_df['Duo Damage Dealt'] / fortnite_df['Duo Damage Taken']
+    return fortnite_df
 
-    MIN_YEAR = 1960
-    MAX_YEAR = 2022
-
-    # The data above has columns like:
-    # - Country Name
-    # - Country Code
-    # - [Stuff I don't care about]
-    # - GDP for 1960
-    # - GDP for 1961
-    # - GDP for 1962
-    # - ...
-    # - GDP for 2022
-    #
-    # ...but I want this instead:
-    # - Country Name
-    # - Country Code
-    # - Year
-    # - GDP
-    #
-    # So let's pivot all those year-columns into two: Year and GDP
-    gdp_df = raw_gdp_df.melt(
-        ['Country Code'],
-        [str(x) for x in range(MIN_YEAR, MAX_YEAR + 1)],
-        'Year',
-        'GDP',
-    )
-
-    # Convert years from string to integers
-    gdp_df['Year'] = pd.to_numeric(gdp_df['Year'])
-
-    return gdp_df
-
-gdp_df = get_gdp_data()
+# Get the placeholder Fortnite data
+fortnite_df = get_fortnite_data()
 
 # -----------------------------------------------------------------------------
-# Draw the actual page
+# Page layout: Player and Tournament selection
 
-# Set the title that appears at the top of the page.
-'''
-# :earth_americas: GDP dashboard
+# Select a player
+players = fortnite_df['Player'].unique()
+selected_player = st.selectbox('Select a Player', players)
 
-Browse GDP data from the [World Bank Open Data](https://data.worldbank.org/) website. As you'll
-notice, the data only goes to 2022 right now, and datapoints for certain years are often missing.
-But it's otherwise a great (and did I mention _free_?) source of data.
-'''
+# Filter the tournaments the player has participated in
+player_tournaments = fortnite_df[fortnite_df['Player'] == selected_player]['Tournament'].unique()
+selected_tournament = st.selectbox('Select a Tournament', player_tournaments)
 
-# Add some spacing
-''
-''
-
-min_value = gdp_df['Year'].min()
-max_value = gdp_df['Year'].max()
-
-from_year, to_year = st.slider(
-    'Which years are you interested in?',
-    min_value=min_value,
-    max_value=max_value,
-    value=[min_value, max_value])
-
-countries = gdp_df['Country Code'].unique()
-
-if not len(countries):
-    st.warning("Select at least one country")
-
-selected_countries = st.multiselect(
-    'Which countries would you like to view?',
-    countries,
-    ['DEU', 'FRA', 'GBR', 'BRA', 'MEX', 'JPN'])
-
-''
-''
-''
-
-# Filter the data
-filtered_gdp_df = gdp_df[
-    (gdp_df['Country Code'].isin(selected_countries))
-    & (gdp_df['Year'] <= to_year)
-    & (from_year <= gdp_df['Year'])
+# Filter the data based on selected player and tournament
+filtered_df = fortnite_df[
+    (fortnite_df['Player'] == selected_player) &
+    (fortnite_df['Tournament'] == selected_tournament)
 ]
 
-st.header('GDP over time', divider='gray')
+# -----------------------------------------------------------------------------
+# Function to display data in squares (customized aesthetic)
 
-''
+def display_stat_square(label, value):
+    st.markdown(
+        f"""
+        <div style="background-color: #f9f9f9; padding: 20px; border-radius: 10px; border: 2px solid #ddd; text-align: center;">
+            <h4 style="margin: 0;">{label}</h4>
+            <p style="font-size: 24px; margin: 0; font-weight: bold;">{value}</p>
+        </div>
+        """, unsafe_allow_html=True
+    )
 
-st.line_chart(
-    filtered_gdp_df,
-    x='Year',
-    y='GDP',
-    color='Country Code',
-)
+# -----------------------------------------------------------------------------
+# Display Player and Duo's Tournament Data
 
-''
-''
+st.header(f'{selected_player} - {selected_tournament}', divider='gray')
 
+if filtered_df.empty:
+    st.warning(f"No data available for {selected_player} in {selected_tournament}")
+else:
+    player_data = filtered_df.iloc[0]  # Get the first (and only) row for the player and tournament
 
-first_year = gdp_df[gdp_df['Year'] == from_year]
-last_year = gdp_df[gdp_df['Year'] == to_year]
+    # Display Rank and Points Earned above the two columns
+    cols = st.columns([1, 1])  # Create two equally wide columns
+    with cols[0]:
+        display_stat_square('Rank', player_data['Rank'])
+    with cols[1]:
+        display_stat_square('Points Earned', player_data['Points Earned'])
 
-st.header(f'GDP in {to_year}', divider='gray')
+    st.header(f'', divider='gray')
+    # Now create two columns for other stats: one for the player, one for the duo
+    cols = st.columns(2)
 
-''
+    # Display Player's Stats in Squares
+    with cols[0]:
+        st.subheader(f"{selected_player} :")
+        display_stat_square('Damage Dealt', player_data['Damage Dealt'])
+        display_stat_square('Damage Taken', player_data['Damage Taken'])
+        display_stat_square('Damage Ratio', f"{player_data['Damage Ratio']:.2f}")
+        display_stat_square('Builds', player_data['Builds'])
+        display_stat_square('Farmed', player_data['Farmed'])
 
-cols = st.columns(4)
-
-for i, country in enumerate(selected_countries):
-    col = cols[i % len(cols)]
-
-    with col:
-        first_gdp = first_year[first_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-        last_gdp = last_year[last_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-
-        if math.isnan(first_gdp):
-            growth = 'n/a'
-            delta_color = 'off'
-        else:
-            growth = f'{last_gdp / first_gdp:,.2f}x'
-            delta_color = 'normal'
-
-        st.metric(
-            label=f'{country} GDP',
-            value=f'{last_gdp:,.0f}B',
-            delta=growth,
-            delta_color=delta_color
-        )
+    # Display Duo's Stats in Squares
+    with cols[1]:
+        st.subheader(f"{player_data['Duo']} (duo) :")
+        display_stat_square('Duo Damage Dealt', player_data['Duo Damage Dealt'])
+        display_stat_square('Duo Damage Taken', player_data['Duo Damage Taken'])
+        display_stat_square('Duo Damage Ratio', f"{player_data['Duo Damage Ratio']:.2f}")
+        display_stat_square('Duo Builds', player_data['Duo Builds'])
+        display_stat_square('Duo Farmed', player_data['Duo Farmed'])
