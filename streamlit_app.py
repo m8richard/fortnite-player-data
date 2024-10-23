@@ -18,7 +18,7 @@ with col1:
     st.image("assets/M8Patch.png", width=75)  # Display the logo on the left
 
 with col2:
-    st.title("M8 Fortnite Data Overview")  # Display the updated title on the right
+    st.title("M8 Fortnite Data Overview TEST")  # Display the updated title on the right
 
 # Placeholder for Fortnite tournament data.
 @st.cache_data
